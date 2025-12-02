@@ -15,66 +15,80 @@ def data_loading(path):
     """_summary_
 
     Args:
-        path (string): chemin d'accès vers le fichier CSV
+        path (string): path to the CSV file
 
     Returns:
-        dict: dictionnaire contenant les actions, leurs coûts et leurs bénéfices
+        dict: dictionary containing stocks, their costs and their profits,
+        actions with a cost of 0 or less are removed.
     """
     data_frame = pandas.read_csv(path)
+    name_column1 = data_frame.columns[0]
+    name_column2 = data_frame.columns[1]
+    name_column3 = data_frame.columns[2]
+    data_frame = data_frame.rename(columns={
+        name_column1: 'name',
+        name_column2: 'cost',
+        name_column3: 'benefit'
+    })
+    # On filtre le dataframe pour enlever les actions avec un coût <= à 0
+    data_frame = data_frame[(data_frame['cost'] > 0)]
+    # On convertit les Euros en centimes
+    data_frame['cost'] = data_frame['cost'] * 100
     return data_frame.to_dict(orient='records')
 
-
 def data_preparation(dict_):
-    """Prépare le jeu de donnée pour l'analyse.
-    Convertir les nombres représentés en chaine en entier.
-    Ajoute le bénéfice en Euros de chaque action.
+    """Prepare the dataset for analysis.
+       Convert profits to integers and absolute values.
 
     Args:
-        dict_ (dict): dictionnaire contenant les actions, leurs coûts et leurs bénéfices
+        dict_ (dict): dictionary containing stocks, their costs and their profits
     """
     for action in dict_:
         action["cost"] = int(action["cost"])
-        action["benefit"] = int(action["benefit"][:-1])
-        action["benefit_value"] = action["cost"] * (action["benefit"] / 100)
+        if isinstance(action["benefit"], str):
+            benefit = int(action["benefit"][:-1])
+        else:
+            benefit = action["benefit"]
+        action["benefit"] = action["cost"] * (benefit / 100)
 
 def data_transformation(dict_):
-    """Transforme le dictionnaire des actions en liste de tuple composé
-    du nom de l'action, de son coût et de son bénéfice
+    """Transform the dictionary of actions into a list of tuples composed of:
+       the action name, its cost, and its profit
 
     Args:
-        dict_ (_type_): dictionnaire contenant les actions, leurs coûts et leurs bénéfices
+        dict_ (_type_): dictionary containing stocks, their costs and their profits
 
     Returns:
-        liste: [(Nom de l'action, coût, bénéfice)]
+        liste: [(action name, cost, benefit)]
     """
     list_tuple = []
     for action in dict_:
-        action_name = action["action"]
+        action_name = action["name"]
         cost = action["cost"]
-        benefit = action["benefit_value"]
+        benefit = action["benefit"]
         list_tuple.append((action_name, cost, benefit))
 
     return list_tuple
 
 def calculate_max_profit(limit, list_):
-    """Détermine la combinsaison d'action qui générera le profit le plus élevé.
+    """Determine the combination of actions that will generate the highest profit.
 
     Args:
-        limit (intger): limite des dépenses
-        list_ (list): Liste contenant les actions
+        limit (intger): Spending limit
+        list_ (list): List containing the actions
 
     Returns:
-        tuple : le profit maximum, la liste des actions à acheter
+        tuple : maximum profit, list of stocks to buy
     """
     # On crée un tableau en 2 dimensions rempli de 0 avec (limit + 1) colonnes et (nombre d'action + 1) lignes
     # On ajoute 1 au nombre d'action pour gérer le cas ou l'on souhaite calculer le bénéfice maximum sans aucune action
-    # On ajoute 1 a la limit pour gérer le cas ou cette limite serait égal à zéro
+    # On ajoute 1 a la limit pour gérer le cas ou cette limite serait égale à zéro
     matrice = [[0 for x in range(limit + 1)] for x in range(len(list_) + 1)]
 
-    for act in range(1, len(list_) + 1):
+    for act in range(1, len(list_) + 1): 
         for lim in range(1, limit + 1):
             # Le coût de l'action est <= à la limite, on peut acheter l'action
-            if list_[act-1][1] <= lim:
+            if list_[act-1][1] <= lim: 
                 # On prend la valeur maximale entre le bénéfice calculé précédement pour la limite 
                 # et le benefice de l'action + le bénéfice calculé précédement pour la limite - le coût de cette action
                 matrice[act][lim] = max(list_[act-1][2] + matrice[act-1][lim-list_[act-1][1]], matrice[act-1][lim])
@@ -88,14 +102,22 @@ def calculate_max_profit(limit, list_):
     action_selection = []
     while lim >= 0 and act >= 0:
         action = list_[act-1]
-        if matrice[act][lim] == matrice[act-1][lim-action[1]] + action[2]:
-            action_selection.append(action)
-            lim -= action[1]
+        if lim - action[1] >= 0:
+            if matrice[act][lim] == matrice[act-1][lim-action[1]] + action[2]:
+                action_selection.append(action)
+                lim -= action[1]
         act -= 1
 
     return matrice[-1][-1], action_selection
     
 def display_result(result, data, time_execute):
+    """Displays the analysis results in a table format
+
+    Args:
+        result (_type_): Analysis results
+        data (_type_): Data analyzed
+        time_execute (_type_): Execution time
+    """
     console = Console()
     titre = Align.center("AlgoInvest&Trade : actions gagnantes !")
     panel_centre = Panel(
@@ -111,15 +133,15 @@ def display_result(result, data, time_execute):
     for action in action_list:
         spent += action[1]
 
-    table = Table(title = 'Paramètre de l\'analyse "BruteForce"', show_lines=True)
+    table = Table(title = 'Paramètre de l\'analyse "Optimized"', show_lines=True)
     table.add_column("Paramètre", justify = "left", style = "green", width=40)
     table.add_column("Valeur", justify = "right", style = "green", width=40)
 
-    table.add_row("Bénéfice maximum", f"{str(result[0])} €")
-    table.add_row("Capital dépensé", f"{str(spent)} €")
+    table.add_row("Bénéfice maximum", f"{str(result[0]/100)} €")
+    table.add_row("Capital dépensé", f"{str(spent/100)} €")
     table.add_row("Nombre d'action à acheter", str(len(result[1])))
     table.add_row("Nombre d'action analysée", str(len(data)))
-    table.add_row("Nombre de combinaison analysée", str(500*len(data)))
+    table.add_row("Nombre de combinaison analysée", str(50000*len(data)))
     table.add_row("Temps de calcul", f"{str(time_execute)} seconde(s)")
     console.print(table)
 
@@ -128,15 +150,17 @@ def display_result(result, data, time_execute):
     table.add_column("Coût", justify = "right", style = "blue", width=26)
     table.add_column("Bénéfice", justify = "right", style = "blue", width=25)
     for action in action_list:
-        table.add_row(action[0], str(action[1]), f"{str(round(action[2],2))} %")
+        table.add_row(action[0], f"{str(action[1]/100)} €", f"{str(round(action[2]/100,2))} €")
     console.print(table)
 
 
-action_dict = data_loading(r"atelier\liste_action.csv")
+# action_dict = data_loading(r"atelier\dataset0.csv")
+# action_dict = data_loading(r"atelier\dataset1.csv")
+action_dict = data_loading(r"atelier\dataset2.csv")
 data_preparation(action_dict)
 data = data_transformation(action_dict)
 time_start = time.time()
-result = calculate_max_profit(500, data)
+result = calculate_max_profit(50000, data)
 time_end = time.time()
 time_execute = round((time_end - time_start),3)
 display_result(result, data, time_execute)

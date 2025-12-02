@@ -14,10 +14,10 @@ def data_loading(path):
     """_summary_
 
     Args:
-        path (string): chemin d'accès vers le fichier CSV
+        path (string): path to the CSV file
 
     Returns:
-        dict: dictionnaire contenant les actions, leurs coûts et leurs bénéfices
+        dict: dictionary containing stocks, their costs and their profits
     """
     with open(path, mode='r', encoding='utf-8') as csv_file:
         reader = csv.DictReader(csv_file)
@@ -25,12 +25,12 @@ def data_loading(path):
     return dict_
 
 def data_preparation(dict_):
-    """Prépare le jeu de donnée pour l'analyse.
-    Convertir les nombres représentés en chaine en entier.
-    Ajoute le bénéfice en Euros de chaque action.
+    """Prepare the dataset for analysis.
+    Convert the numbers represented as strings to integers.
+    Add the profit in Euros for each stock.
 
     Args:
-        dict_ (dict): dictionnaire contenant les actions, leurs coûts et leurs bénéfices
+        dict_ (dict): dictionary containing stocks, their costs and their profits
     """
     for action in dict_:
         action["cost"] = int(action["cost"])
@@ -38,14 +38,14 @@ def data_preparation(dict_):
         action["benefit_value"] = action["cost"] * (action["benefit"] / 100)
 
 def data_transformation(dict_):
-    """Transforme le dictionnaire des actions en liste de tuple composé
-    du nom de l'action, de son coût et de son bénéfice
+    """Transform the dictionary of actions into a list of tuples composed of:
+    the action name, its cost, and its profit
 
     Args:
-        dict_ (_type_): dictionnaire contenant les actions, leurs coûts et leurs bénéfices
+        dict_ (_type_): dictionary containing stocks, their costs and their profits
 
     Returns:
-        liste: [(Nom de l'action, coût, bénéfice)]
+        liste: [(action name, cost, benefit)]
     """
     list_tuple = []
     for action in dict_:
@@ -57,15 +57,15 @@ def data_transformation(dict_):
     return list_tuple
 
 def calculate_max_profit(limit, list_, action_selection = []):
-    """Détermine la combinsaison d'action qui générera le profit le plus élevé.
+    """Determine the combination of actions that will generate the highest profit.
 
     Args:
-        limit (intger): limite des dépenses
-        list_ (list): Liste contenant les actions
-        action_selection (list, optional): Les actions à acheter pour atteindre le bénéfice maximum.
+        limit (intger): spending limit
+        list_ (list): List containing the actions
+        action_selection (list, optional): Stocks to buy to achieve maximum profit.
 
     Returns:
-        tuple : le profit maximum, la liste des actions à acheter
+        tuple : maximum profit, list of stocks to buy
     """
     if list_:
         # cas ou on n'achète pas l'action, on appelle récusrsivement la fonction
@@ -85,11 +85,18 @@ def calculate_max_profit(limit, list_, action_selection = []):
         return sum([action[2] for action in action_selection]), action_selection
     
 def display_result(result, data, time_execute):
+    """Displays the analysis results in a table format
+
+    Args:
+        result (_type_): Analysis results
+        data (_type_): Data analyzed
+        time_execute (_type_): Execution time
+    """
     console = Console()
     titre = Align.center("AlgoInvest&Trade : actions gagnantes !")
     panel_centre = Panel(
         titre,
-        width = 87, # Largeur du panneau pour la démonstration
+        width = 87,
         border_style="bold blue",
         style="bold green"
     )
@@ -121,7 +128,7 @@ def display_result(result, data, time_execute):
     console.print(table)
 
 
-action_dict = data_loading(r"atelier\liste_action.csv")
+action_dict = data_loading(r"atelier\dataset0.csv")
 data_preparation(action_dict)
 data = data_transformation(action_dict)
 time_start = time.time()
